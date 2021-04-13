@@ -7,12 +7,11 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 
-import androidx.appcompat.app.AppCompatActivity;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
+import java.math.BigInteger;
 import java.net.Socket;
 import java.net.SocketException;
 import java.net.UnknownHostException;
@@ -77,9 +76,11 @@ public class RPS extends AppCompatActivity {
                             final byte PROTOCOL_VERSION = 1;
                             final byte GAME_ID          = 2;
 
-                            byte[] message = { uid, CONFIRMATION, CONFIRM_RULESET, payload_length, PROTOCOL_VERSION, GAME_ID};
+                            byte[] messagePartOne = BigInteger.valueOf(uid).toByteArray();
+                            byte[] message = {CONFIRMATION, CONFIRM_RULESET, payload_length, PROTOCOL_VERSION, GAME_ID};
 
-                            toServer.println(Arrays.toString(message));
+                            toServer.write(messagePartOne);
+                            toServer.write(message);
 
                             try {
                                 System.out.println("HI!!!!!");
