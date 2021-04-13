@@ -30,15 +30,11 @@ enum Choices {
     SCISSORS
 }
 
-enum LOG_DATA {
-    CLICK,
-    STREAM,
-}
-
 public class RPS extends AppCompatActivity {
     private static final String STREAM = "STREAM";
     private static final String CLICK = "CLICK";
     private static final String INVITE = "INVITE";
+    private static final String PLAY = "PLAY";
 
 
     private Button rock;
@@ -51,7 +47,7 @@ public class RPS extends AppCompatActivity {
     private GameData player;
 
     private Button[] buttons;
-    private Byte choice = 0;
+    private int choice;
 
     public boolean running = false;
     public BufferedReader in;
@@ -76,7 +72,7 @@ public class RPS extends AppCompatActivity {
         buttons[Choices.ROCK.ordinal()].setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Log.i(LOG_DATA.CLICK.toString(), "Clicked " + Choices.ROCK);
+                Log.i(CLICK, "Clicked " + Choices.ROCK);
                 choice = 1;
                 /*
                 1. Construct a packet
@@ -87,23 +83,38 @@ public class RPS extends AppCompatActivity {
                 final byte uid2             = 0;
                 final byte uid3             = 0;
                 byte uid4                   = 0;
-                final byte GAME_ACTION      = 4;
-                final byte MOVE_MADE        = 2;
-                final byte payload_length   = 1;
-                final byte PLAY             = choice;
 
-                final byte[] play = {uid1, uid2, uid3, uid4, GAME_ACTION, MOVE_MADE, payload_length, PLAY};
+//                final byte uid              = (byte) player.getUid();
+                final int GAME_ACTION      = 4;
+                final int MOVE_MADE        = 2;
+                final int payload_length   = 1;
+//                final int PLAY             = choice;
 
-                Thread thread = new Thread(new Runnable() {
-                    @Override
-                    public void run() {
-                        try {
-                            toServer.write(play);
-                        } catch (IOException e) {
-                            e.printStackTrace();
+//                final byte[] play = {uid1, uid2, uid3, uid4, MSG_TYPES.GAME_ACTION.getMsg_type(), MOVE_MADE, payload_length, PLAY};
+
+                final int[] pl = {1};
+
+                RequestPacket req = new RequestPacket(player.getUid(), GAME_ACTION, MOVE_MADE, payload_length, pl);
+                Log.i(PLAY, req.toString());
+                final byte[] packet = req.toBytes();
+
+                Thread thread = null;
+                try {
+                    thread = new Thread(new Runnable() {
+
+
+                        @Override
+                        public void run() {
+                            try {
+                                toServer.write(packet);
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
                         }
-                    }
-                });
+                    });
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
                 thread.start();
             }
         });
@@ -186,7 +197,7 @@ public class RPS extends AppCompatActivity {
 
                                         Packet welcomePacket = new Packet(packet[0], packet[1], packet[2], payload);
 
-                                        GameData player = new GameData(welcomePacket.getPayload()[0]);
+                                        player = new GameData(welcomePacket.getPayload()[0]);
                                         Log.i(STREAM, welcomePacket.toString());
 
                                         //Now and UPDATE message should arrive, inviting play.
@@ -342,4 +353,5 @@ public class RPS extends AppCompatActivity {
 
         connect.setEnabled(false);
     }
+
 }

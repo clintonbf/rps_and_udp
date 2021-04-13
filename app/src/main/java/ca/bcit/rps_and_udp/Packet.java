@@ -1,12 +1,15 @@
 package ca.bcit.rps_and_udp;
 
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
 import java.util.Arrays;
 
 public class Packet {
-    private int messageType;
-    private int messageContext;
-    private int payloadLength;
-    private int[] payload;
+    protected int messageType;
+    protected int messageContext;
+    protected int payloadLength;
+    protected int[] payload;
 
     public Packet() {}
 
@@ -42,5 +45,21 @@ public class Packet {
                 ", payloadLength=" + payloadLength +
                 ", payload=" + Arrays.toString(payload) +
                 '}';
+    }
+
+    public byte[] toBytes() throws IOException {
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        DataOutputStream dos = new DataOutputStream(bos);
+
+        dos.writeInt(this.messageType);
+        dos.writeInt(this.messageContext);
+        dos.writeInt(this.payloadLength);
+
+        for (int payloadItem : this.payload) {
+            dos.writeInt(payloadItem);
+        }
+
+        dos.flush(); // Where specifically does this need to go??
+        return bos.toByteArray();
     }
 }
