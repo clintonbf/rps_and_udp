@@ -38,6 +38,7 @@ enum LOG_DATA {
 public class RPS extends AppCompatActivity {
     private static final String STREAM = "STREAM";
     private static final String CLICK = "CLICK";
+    private static final String INVITE = "INVITE";
 
 
     private Button rock;
@@ -88,7 +89,7 @@ public class RPS extends AppCompatActivity {
         buttons[Choices.PAPER.ordinal()].setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Log.i(LOG_DATA.CLICK.toString(), "Clicked " + Choices.PAPER);
+                Log.i(CLICK, "Clicked " + Choices.PAPER);
                 choice = 2;
 
             }
@@ -97,7 +98,7 @@ public class RPS extends AppCompatActivity {
         buttons[Choices.SCISSORS.ordinal()].setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Log.i(LOG_DATA.CLICK.toString(), "Clicked " + Choices.SCISSORS);
+                Log.i(CLICK, "Clicked " + Choices.SCISSORS);
                 choice = 3;
 
             }
@@ -135,11 +136,11 @@ public class RPS extends AppCompatActivity {
                             final byte PROTOCOL_VERSION = 1;
                             final byte GAME_ID          = 2;
 
-                            byte[] message = {uid1, uid2, uid3, uid4, CONFIRMATION, CONFIRM_RULESET, payload_length, PROTOCOL_VERSION, GAME_ID};
+                            byte[] handshake = {uid1, uid2, uid3, uid4, CONFIRMATION, CONFIRM_RULESET, payload_length, PROTOCOL_VERSION, GAME_ID};
 
-                            toServer.write(message);
+                            toServer.write(handshake);
 
-//                            while (true) {
+                            while (true) {
                                 try {
                                     InputStream stream = socket.getInputStream();
 
@@ -148,6 +149,11 @@ public class RPS extends AppCompatActivity {
 
                                         int count = stream.read(packet);
 
+//                                        if (count < 0) {
+//                                            Log.e(STREAM, "No data received in handshake");
+//                                            socket.close();
+//                                            System.exit(1);
+//                                        }
                                         int[] payload = new int[packet[2]];
                                         int index = 0;
 
@@ -156,14 +162,21 @@ public class RPS extends AppCompatActivity {
                                             index++;
                                         }
 
-                                        Packet receivedData = new Packet(packet[0], packet[1], packet[2], payload);
+                                        Packet welcomePacket = new Packet(packet[0], packet[1], packet[2], payload);
 
-                                        Log.i(STREAM, receivedData.toString());
+                                        GameData player = new GameData(welcomePacket.getPayload()[0]);
+                                        Log.i(STREAM, welcomePacket.toString());
+
+                                        //Now and UPDATE message should arrive, inviting play.
+
+                                        count = stream.read(packet);
+
+
                                     }
                                 } catch (IOException e) {
                                     e.printStackTrace();
                                 }
-//                            }
+                            }
                         } catch (SocketException se) {
                             Log.e("CONNECTION:", "Unable to connect");
                         } catch (IOException e) {

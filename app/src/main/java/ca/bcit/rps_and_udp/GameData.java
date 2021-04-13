@@ -6,6 +6,10 @@ public class GameData {
     public GameData() {
     }
 
+    public GameData(final int id) {
+        this.uid = id;
+    }
+
     public int getUid() {
         return uid;
     }
