@@ -7,22 +7,15 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 
-import java.io.BufferedInputStream;
 import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
-import java.math.BigInteger;
 import java.net.Socket;
 import java.net.SocketException;
 import java.net.UnknownHostException;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.util.Arrays;
-import java.util.Queue;
 
 enum Choices {
     ROCK,
@@ -36,7 +29,6 @@ public class RPS extends AppCompatActivity {
     private static final String INVITE = "INVITE";
     private static final String PLAY = "PLAY";
 
-
     private Button rock;
     private Button paper;
     private Button scissors;
@@ -47,7 +39,6 @@ public class RPS extends AppCompatActivity {
     private GameData player;
 
     private Button[] buttons;
-    private int choice;
 
     public boolean running = false;
     public BufferedReader in;
@@ -67,46 +58,17 @@ public class RPS extends AppCompatActivity {
         buttons[Choices.PAPER.ordinal()]    = paper;
         buttons[Choices.SCISSORS.ordinal()] = scissors;
 
-        buttons[0].setClickable(false);
+        player = new GameData();
+
+        disableButtons();
 
         buttons[Choices.ROCK.ordinal()].setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 Log.i(CLICK, "Clicked " + Choices.ROCK);
-                choice = 1;
-                /*
-                1. Construct a packet
-                2. Send packet
-                3. Wait for response
-                 */
+                final int choice = 1;
 
                 sendPlay(choice);
-//                final int GAME_ACTION      = 4;
-//                final int MOVE_MADE        = 2;
-//                final int payload_length   = 1;
-//
-//                final int[] payload = { choice };
-//
-//                RequestPacket req = new RequestPacket(player.getUid(), GAME_ACTION, MOVE_MADE, payload_length, payload);
-//                Log.i(PLAY, req.toString());
-//                final byte[] packet = req.toBytes();
-//
-//                Thread thread = null;
-//                try {
-//                    thread = new Thread(new Runnable() {
-//                        @Override
-//                        public void run() {
-//                            try {
-//                                toServer.write(packet);
-//                            } catch (IOException e) {
-//                                e.printStackTrace();
-//                            }
-//                        }
-//                    });
-//                } catch (Exception e) {
-//                    e.printStackTrace();
-//                }
-//                thread.start();
             }
         });
 
@@ -114,8 +76,9 @@ public class RPS extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 Log.i(CLICK, "Clicked " + Choices.PAPER);
-                choice = 2;
+                final int choice = 2;
 
+                sendPlay(choice);
             }
         });
 
@@ -123,22 +86,16 @@ public class RPS extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 Log.i(CLICK, "Clicked " + Choices.SCISSORS);
-                choice = 3;
-
+                final int choice = 3;
+                sendPlay(choice);
             }
         });
-
-//        disableButtons();
-
-        player = new GameData();
 
         connect.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-//                connectToServer();
-//                sendHandshake();
-//                setUid();
-//                enableButtons();
+                enableButtons();
+                connect.setEnabled(false);
 
                 Thread thread = new Thread(new Runnable() {
                     @Override
@@ -336,6 +293,8 @@ public class RPS extends AppCompatActivity {
 
         final int[] payload = { choice };
 
+        disableButtons();
+
         RequestPacket req = new RequestPacket(player.getUid(), GAME_ACTION, MOVE_MADE, payload_length, payload);
         Log.i(PLAY, req.toString());
         final byte[] packet = req.toBytes();
@@ -362,16 +321,12 @@ public class RPS extends AppCompatActivity {
         for (Button button : this.buttons) {
             button.setEnabled(false);
         }
-
-        connect.setEnabled(true);
     }
 
     private void enableButtons() {
         for (Button button : this.buttons) {
             button.setEnabled(true);
         }
-
-        connect.setEnabled(false);
     }
 
 }
