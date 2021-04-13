@@ -30,7 +30,17 @@ enum Choices {
     SCISSORS
 }
 
+enum LOG_DATA {
+    CLICK,
+    STREAM,
+}
+
 public class RPS extends AppCompatActivity {
+    private static final String STREAM = "STREAM";
+    private static final String CLICK = "CLICK";
+
+
+    private Button rock;
     private Button paper;
     private Button scissors;
     private Button connect;
@@ -50,46 +60,52 @@ public class RPS extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_r_p_s);
 
-        Button rock = (Button) findViewById(R.id.choose_rock);
-        paper = (Button) findViewById(R.id.choose_paper);
-        scissors = (Button) findViewById(R.id.choose_scissors);
-        connect = (Button) findViewById(R.id.connect_rps);
+        rock        = (Button) findViewById(R.id.choose_rock);
+        paper       = (Button) findViewById(R.id.choose_paper);
+        scissors    = (Button) findViewById(R.id.choose_scissors);
+        connect     = (Button) findViewById(R.id.connect_rps);
 
         buttons = new Button[3];
-        buttons[0] = rock;
-        buttons[1] = paper;
-        buttons[2] = scissors;
-
+        buttons[Choices.ROCK.ordinal()]     = rock;
+        buttons[Choices.PAPER.ordinal()]    = paper;
+        buttons[Choices.SCISSORS.ordinal()] = scissors;
 
         buttons[0].setClickable(false);
 
-        buttons[0].setOnClickListener(new View.OnClickListener() {
+        buttons[Choices.ROCK.ordinal()].setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                Log.i(LOG_DATA.CLICK.toString(), "Clicked " + Choices.ROCK);
                 choice = 1;
-
+                /*
+                1. Construct a packet
+                2. Send packet
+                3. Wait for response
+                 */
             }
         });
-        buttons[1].setOnClickListener(new View.OnClickListener() {
+
+        buttons[Choices.PAPER.ordinal()].setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                Log.i(LOG_DATA.CLICK.toString(), "Clicked " + Choices.PAPER);
                 choice = 2;
 
             }
         });
-        buttons[2].setOnClickListener(new View.OnClickListener() {
+
+        buttons[Choices.SCISSORS.ordinal()].setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                Log.i(LOG_DATA.CLICK.toString(), "Clicked " + Choices.SCISSORS);
                 choice = 3;
 
             }
         });
 
-
 //        disableButtons();
 
         player = new GameData();
-
 
         connect.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -107,12 +123,12 @@ public class RPS extends AppCompatActivity {
                         try {
                             socket = new Socket(Environment.HOST, Environment.PORT);
                             toServer = new PrintStream(socket.getOutputStream());
+                            fromServer = new BufferedReader(new InputStreamReader(socket.getInputStream())); // this could be simplified to just an InputStream (Readers are for char data, and Buffered... we're not dealing with enough data
 
-
-                            final byte uid1              = 0;
-                            final byte uid2              = 0;
+                            final byte uid1             = 0;
+                            final byte uid2             = 0;
                             final byte uid3             = 0;
-                            byte uid4              = 0;
+                            byte uid4                   = 0;
                             final byte CONFIRMATION     = 1;
                             final byte CONFIRM_RULESET  = 1;
                             final byte payload_length   = 2;
@@ -123,42 +139,33 @@ public class RPS extends AppCompatActivity {
 
                             toServer.write(message);
 
-
-
-                            System.out.println("hi");
-
-                            try {
-                                while(true){
+//                            while (true) {
+                                try {
                                     InputStream stream = socket.getInputStream();
-                                    if(stream.available() > 0){
-                                        byte[] data = new byte[30];
-                                        int count = stream.read(data);
-                                        if(data[0] == 10) {
-                                            // get uid
-                                            uid4 = data[7];
-                                           buttons[0].setClickable(true);
-                                        } else if (data[0] == 20) {
-//                                            enableButtons();
-                                            while(choice == 0) {
-                                                // wait
-                                            }
-                                            System.out.println("\n\n*********************************************************************************************HWLLO********************************************************************************************************* \n\n");
+
+                                    if (stream.available() > 0) {
+                                        byte[] packet = new byte[4];
+
+                                        int count = stream.read(packet);
+
+                                        int[] payload = new int[packet[2]];
+                                        int index = 0;
+
+                                        for (int i = 3; i < 3 + packet[2]; i++) {
+                                            payload[index] = packet[i];
+                                            index++;
                                         }
-//                                        break;
-                                    };
-                                    Thread.sleep(1);
+
+                                        Packet receivedData = new Packet(packet[0], packet[1], packet[2], payload);
+
+                                        Log.i(STREAM, receivedData.toString());
+                                    }
+                                } catch (IOException e) {
+                                    e.printStackTrace();
                                 }
-
-                } catch (IOException e) {
-                    e.printStackTrace();
-                } catch (InterruptedException e) {
-                                e.printStackTrace();
-                            }
-
+//                            }
                         } catch (SocketException se) {
                             Log.e("CONNECTION:", "Unable to connect");
-                        } catch (UnknownHostException e) {
-                            e.printStackTrace();
                         } catch (IOException e) {
                             e.printStackTrace();
                         }
@@ -166,7 +173,6 @@ public class RPS extends AppCompatActivity {
                 });
 
                 thread.start();
-
             }
         });
     }
@@ -224,7 +230,6 @@ public class RPS extends AppCompatActivity {
         toServer.println(Arrays.toString(message));
     }
 
-
     public final class Reader implements Runnable {
 
         final private Socket sock;
@@ -258,7 +263,6 @@ public class RPS extends AppCompatActivity {
 
         }
     }
-
 
     private void setUid() {
         //Read a message
