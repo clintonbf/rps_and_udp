@@ -1,3 +1,11 @@
 <resources>
-    <string name="app_name">rps_and_udp</string>
+    <string name="app_name">protocols_project</string>
+
+
+    <string name="go_to_rps">Play RPS</string>
+    <string name="go_to_chat">Chat with someone</string>
+    <string name="connect_to_server">Connect to Server</string>
+    <string name="scissors">Scissors</string>
+    <string name="rock">Rock</string>
+    <string name="paper">Paper</string>
 </resources>
