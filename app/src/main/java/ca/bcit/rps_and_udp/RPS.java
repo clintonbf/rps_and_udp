@@ -83,6 +83,28 @@ public class RPS extends AppCompatActivity {
                 2. Send packet
                 3. Wait for response
                  */
+                final byte uid1             = 0;
+                final byte uid2             = 0;
+                final byte uid3             = 0;
+                byte uid4                   = 0;
+                final byte GAME_ACTION      = 4;
+                final byte MOVE_MADE        = 2;
+                final byte payload_length   = 1;
+                final byte PLAY             = choice;
+
+                final byte[] play = {uid1, uid2, uid3, uid4, GAME_ACTION, MOVE_MADE, payload_length, PLAY};
+
+                Thread thread = new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            toServer.write(play);
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                });
+                thread.start();
             }
         });
 
@@ -147,13 +169,13 @@ public class RPS extends AppCompatActivity {
                                     if (stream.available() > 0) {
                                         byte[] packet = new byte[4];
 
-                                        int count = stream.read(packet);
+                                        int bytesRead = stream.read(packet);
 
-//                                        if (count < 0) {
-//                                            Log.e(STREAM, "No data received in handshake");
-//                                            socket.close();
-//                                            System.exit(1);
-//                                        }
+                                        if (bytesRead < 0) {
+                                            Log.e(STREAM, "No data received in handshake");
+                                            socket.close();
+                                            System.exit(1);
+                                        }
                                         int[] payload = new int[packet[2]];
                                         int index = 0;
 
@@ -169,8 +191,26 @@ public class RPS extends AppCompatActivity {
 
                                         //Now and UPDATE message should arrive, inviting play.
 
-                                        count = stream.read(packet);
+                                        bytesRead = stream.read(packet);
+                                        if (bytesRead < 0) {
+                                            Log.e(STREAM, "No data received in handshake");
+                                            socket.close();
+                                            System.exit(1);
+                                        }
 
+                                        payload = new int[packet[2]];
+                                        index = 0;
+
+                                        for (int i = 3; i < 3 + packet[2]; i++) {
+                                            payload[index] = packet[i];
+                                            index++;
+                                        }
+
+                                        Packet invitePacket = new Packet(packet[0], packet[1], packet[2], payload);
+                                        Log.i(INVITE, invitePacket.toString());
+
+                                        //Send your play
+//                                        enableButtons();
 
                                     }
                                 } catch (IOException e) {

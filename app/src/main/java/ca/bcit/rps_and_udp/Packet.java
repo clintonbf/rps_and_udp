@@ -8,6 +8,8 @@ public class Packet {
     private int payloadLength;
     private int[] payload;
 
+    public Packet() {}
+
     public Packet(final int messageType, final int messageContext, final int payloadLength,
                   final int[] payload) {
         this.messageType = messageType;
