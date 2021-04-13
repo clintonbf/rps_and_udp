@@ -7,15 +7,22 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 
+import java.io.BufferedInputStream;
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.math.BigInteger;
 import java.net.Socket;
 import java.net.SocketException;
 import java.net.UnknownHostException;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.Arrays;
+import java.util.Queue;
 
 enum Choices {
     ROCK,
@@ -33,6 +40,10 @@ public class RPS extends AppCompatActivity {
     private GameData player;
 
     private Button[] buttons;
+    private Byte choice = 0;
+
+    public boolean running = false;
+    public BufferedReader in;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -49,9 +60,36 @@ public class RPS extends AppCompatActivity {
         buttons[1] = paper;
         buttons[2] = scissors;
 
-        disableButtons();
+
+        buttons[0].setClickable(false);
+
+        buttons[0].setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                choice = 1;
+
+            }
+        });
+        buttons[1].setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                choice = 2;
+
+            }
+        });
+        buttons[2].setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                choice = 3;
+
+            }
+        });
+
+
+//        disableButtons();
 
         player = new GameData();
+
 
         connect.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -64,29 +102,56 @@ public class RPS extends AppCompatActivity {
                 Thread thread = new Thread(new Runnable() {
                     @Override
                     public void run() {
+                        running = true;
+
                         try {
                             socket = new Socket(Environment.HOST, Environment.PORT);
                             toServer = new PrintStream(socket.getOutputStream());
-                            fromServer = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 
-                            final int uid               = 0;
+
+                            final byte uid1              = 0;
+                            final byte uid2              = 0;
+                            final byte uid3             = 0;
+                            byte uid4              = 0;
                             final byte CONFIRMATION     = 1;
                             final byte CONFIRM_RULESET  = 1;
                             final byte payload_length   = 2;
                             final byte PROTOCOL_VERSION = 1;
                             final byte GAME_ID          = 2;
 
-                            byte[] messagePartOne = BigInteger.valueOf(uid).toByteArray();
-                            byte[] message = {CONFIRMATION, CONFIRM_RULESET, payload_length, PROTOCOL_VERSION, GAME_ID};
+                            byte[] message = {uid1, uid2, uid3, uid4, CONFIRMATION, CONFIRM_RULESET, payload_length, PROTOCOL_VERSION, GAME_ID};
 
-                            toServer.write(messagePartOne);
                             toServer.write(message);
 
+
+
+                            System.out.println("hi");
+
                             try {
-                                System.out.println("HI!!!!!");
-                                String message2 = fromServer.readLine();
-                                Log.i("UID", "Server sent uid " + message2);
-                            } catch (IOException e) {
+                                while(true){
+                                    InputStream stream = socket.getInputStream();
+                                    if(stream.available() > 0){
+                                        byte[] data = new byte[30];
+                                        int count = stream.read(data);
+                                        if(data[0] == 10) {
+                                            // get uid
+                                            uid4 = data[7];
+                                           buttons[0].setClickable(true);
+                                        } else if (data[0] == 20) {
+//                                            enableButtons();
+                                            while(choice == 0) {
+                                                // wait
+                                            }
+                                            System.out.println("\n\n*********************************************************************************************HWLLO********************************************************************************************************* \n\n");
+                                        }
+//                                        break;
+                                    };
+                                    Thread.sleep(1);
+                                }
+
+                } catch (IOException e) {
+                    e.printStackTrace();
+                } catch (InterruptedException e) {
                                 e.printStackTrace();
                             }
 
@@ -101,6 +166,7 @@ public class RPS extends AppCompatActivity {
                 });
 
                 thread.start();
+
             }
         });
     }
@@ -157,6 +223,42 @@ public class RPS extends AppCompatActivity {
 
         toServer.println(Arrays.toString(message));
     }
+
+
+    public final class Reader implements Runnable {
+
+        final private Socket sock;
+
+        public boolean mRun = false;
+
+        public Reader(final Socket socket) {
+            sock = socket;
+        }
+
+        @Override
+        public void run() {
+            mRun = true;
+            System.out.println("Socket is : " + sock);
+            while (mRun) {
+                try {
+                    fromServer = new BufferedReader(new InputStreamReader(sock.getInputStream()));
+//                    byte[] data = new byte[30];
+//                    int count = fromServer.read();
+
+
+//                    if (count > 1) {
+//                        mRun = false;
+//                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+
+            }
+//            BufferedReader fromServer = new BufferedReader(new InputStreamReader(sock.getInputStream()));
+
+        }
+    }
+
 
     private void setUid() {
         //Read a message
