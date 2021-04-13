@@ -79,43 +79,34 @@ public class RPS extends AppCompatActivity {
                 2. Send packet
                 3. Wait for response
                  */
-                final byte uid1             = 0;
-                final byte uid2             = 0;
-                final byte uid3             = 0;
-                byte uid4                   = 0;
 
-//                final byte uid              = (byte) player.getUid();
-                final int GAME_ACTION      = 4;
-                final int MOVE_MADE        = 2;
-                final int payload_length   = 1;
-//                final int PLAY             = choice;
-
-//                final byte[] play = {uid1, uid2, uid3, uid4, MSG_TYPES.GAME_ACTION.getMsg_type(), MOVE_MADE, payload_length, PLAY};
-
-                final int[] pl = {1};
-
-                RequestPacket req = new RequestPacket(player.getUid(), GAME_ACTION, MOVE_MADE, payload_length, pl);
-                Log.i(PLAY, req.toString());
-                final byte[] packet = req.toBytes();
-
-                Thread thread = null;
-                try {
-                    thread = new Thread(new Runnable() {
-
-
-                        @Override
-                        public void run() {
-                            try {
-                                toServer.write(packet);
-                            } catch (IOException e) {
-                                e.printStackTrace();
-                            }
-                        }
-                    });
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-                thread.start();
+                sendPlay(choice);
+//                final int GAME_ACTION      = 4;
+//                final int MOVE_MADE        = 2;
+//                final int payload_length   = 1;
+//
+//                final int[] payload = { choice };
+//
+//                RequestPacket req = new RequestPacket(player.getUid(), GAME_ACTION, MOVE_MADE, payload_length, payload);
+//                Log.i(PLAY, req.toString());
+//                final byte[] packet = req.toBytes();
+//
+//                Thread thread = null;
+//                try {
+//                    thread = new Thread(new Runnable() {
+//                        @Override
+//                        public void run() {
+//                            try {
+//                                toServer.write(packet);
+//                            } catch (IOException e) {
+//                                e.printStackTrace();
+//                            }
+//                        }
+//                    });
+//                } catch (Exception e) {
+//                    e.printStackTrace();
+//                }
+//                thread.start();
             }
         });
 
@@ -336,6 +327,35 @@ public class RPS extends AppCompatActivity {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    private void sendPlay(final int choice) {
+        final int GAME_ACTION      = 4;
+        final int MOVE_MADE        = 2;
+        final int payload_length   = 1;
+
+        final int[] payload = { choice };
+
+        RequestPacket req = new RequestPacket(player.getUid(), GAME_ACTION, MOVE_MADE, payload_length, payload);
+        Log.i(PLAY, req.toString());
+        final byte[] packet = req.toBytes();
+
+        Thread thread = null;
+        try {
+            thread = new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        toServer.write(packet);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            });
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        thread.start();
     }
 
     private void disableButtons() {
