@@ -224,22 +224,33 @@ public class RPS extends AppCompatActivity {
 
     private void sendHandshake() {
         final int uid               = 0;
-        final byte CONFIRMATION     = 1;
-        final byte CONFIRM_RULESET  = 1;
-        final byte payload_length   = 2;
-        final byte PROTOCOL_VERSION = 1;
-        final byte GAME_ID          = 2;
+        final int CONFIRMATION     = 1;
+        final int CONFIRM_RULESET  = 1;
+        final int payload_length   = 2;
+        final int PROTOCOL_VERSION = 1;
+        final int GAME_ID          = 2;
 
-        byte[] message = { uid, CONFIRMATION, CONFIRM_RULESET, payload_length, PROTOCOL_VERSION, GAME_ID};
-        if (toServer == null) {
-            try {
-                toServer = new PrintStream(socket.getOutputStream());
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+        final int[] payload = { PROTOCOL_VERSION, GAME_ID };
+
+        RequestPacket req = new RequestPacket(uid, CONFIRMATION, CONFIRM_RULESET, payload_length, payload);
+        final byte[] packet = req.toBytes();
+
+        Thread thread = null;
+        try {
+            thread = new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        toServer.write(packet);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            });
+        } catch (Exception e) {
+            e.printStackTrace();
         }
-
-        toServer.println(Arrays.toString(message));
+        thread.start();
     }
 
     public final class Reader implements Runnable {
@@ -299,6 +310,25 @@ public class RPS extends AppCompatActivity {
         Log.i(PLAY, req.toString());
         final byte[] packet = req.toBytes();
 
+        Thread thread = null;
+        try {
+            thread = new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        toServer.write(packet);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            });
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        thread.start();
+    }
+
+    private void sendPacket(final byte[] packet) {
         Thread thread = null;
         try {
             thread = new Thread(new Runnable() {
