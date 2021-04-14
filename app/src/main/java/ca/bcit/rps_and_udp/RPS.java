@@ -19,12 +19,6 @@ import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 
-enum Choices {
-    ROCK,
-    PAPER,
-    SCISSORS
-};
-
 enum Outcomes {
     WIN,
     LOSS,
@@ -41,6 +35,9 @@ public class RPS extends AppCompatActivity {
     private static final String PLAY_ACK    = "PLAY Acknowledged";
     private static final String OUTCOME = "OUTCOME";
 
+    private static final int ROCK       = 1;
+    private static final int PAPER      = 2;
+    private static final int SCISSORS   = 3;
 
     private Button          connectButton;
     private PrintStream     toServer;
@@ -64,50 +61,47 @@ public class RPS extends AppCompatActivity {
         connectButton   = (Button) findViewById(R.id.connect_rps);
         outcome         = (TextView) findViewById(R.id.outcome_label);
 
-        buttons = new Button[3];
-        buttons[Choices.ROCK.ordinal()]     = rock;
-        buttons[Choices.PAPER.ordinal()]    = paper;
-        buttons[Choices.SCISSORS.ordinal()] = scissors;
+        buttons = new Button[4];
+        buttons[ROCK]     = rock;
+        buttons[PAPER]    = paper;
+        buttons[SCISSORS] = scissors;
 
         player = new GameData();
 
         disableButtons();
 
-        buttons[Choices.ROCK.ordinal()].setOnClickListener(new View.OnClickListener() {
+        buttons[ROCK].setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Log.d(CLICK, "Clicked " + Choices.ROCK);
-                final int choice = 1;
+                Log.d(CLICK, "Clicked " + ROCK);
 
 //                sendPlay(choice);
-                playChoice = choice;
+                playChoice = ROCK;
                 notifyUserOfOutcome();
                 initButtons();
             }
         });
 
-        buttons[Choices.PAPER.ordinal()].setOnClickListener(new View.OnClickListener() {
+        buttons[PAPER].setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Log.d(CLICK, "Clicked " + Choices.PAPER);
-                final int choice = 2;
+                Log.d(CLICK, "Clicked " + PAPER);
 
 //                sendPlay(choice);
-                playChoice = choice;
+                playChoice = PAPER;
                 notifyUserOfOutcome();
                 initButtons();
             }
         });
 
 
-        buttons[Choices.SCISSORS.ordinal()].setOnClickListener(new View.OnClickListener() {
+        buttons[SCISSORS].setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Log.d(CLICK, "Clicked " + Choices.SCISSORS);
-                final int choice = 3;
+                Log.d(CLICK, "Clicked " + SCISSORS);
 
 //                sendPlay(choice);
-                playChoice = choice;
+                playChoice = SCISSORS;
                 notifyUserOfOutcome();
                 initButtons();
             }
@@ -384,14 +378,14 @@ public class RPS extends AppCompatActivity {
 
 
     private void disableButtons() {
-        for (Button button : this.buttons) {
-            button.setEnabled(false);
+        for (int i = 1; i < buttons.length; i++) {
+            buttons[i].setEnabled(false);
         }
     }
 
     private void enableButtons() {
-        for (Button button : this.buttons) {
-            button.setEnabled(true);
+        for (int i = 1; i < buttons.length; i++) {
+            buttons[i].setEnabled(true);
         }
     }
 
