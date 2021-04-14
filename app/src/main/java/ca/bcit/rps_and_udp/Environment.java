@@ -6,6 +6,6 @@ public class Environment {
     private static final String LINUX = "192.168.1.76";
 
 
-    public static final String HOST = HOBOTECH;
+    public static final String HOST = LINUX;
     public static final int PORT = 42069;
 }

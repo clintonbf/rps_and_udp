@@ -15,7 +15,8 @@ import java.io.PrintStream;
 import java.net.Socket;
 import java.net.SocketException;
 import java.net.UnknownHostException;
-import java.util.Arrays;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 
 enum Choices {
     ROCK,
@@ -30,7 +31,7 @@ public class RPS extends AppCompatActivity {
     private static final String PLAY    = "PLAY";
     private static final String OUTCOME = "OUTCOME";
 
-    private Button          connect;
+    private Button connectButton;
     private BufferedReader  fromServer;
     private PrintStream     toServer;
     private InputStream     stream;
@@ -46,7 +47,7 @@ public class RPS extends AppCompatActivity {
         Button rock     = (Button) findViewById(R.id.choose_rock);
         Button paper    = (Button) findViewById(R.id.choose_paper);
         Button scissors = (Button) findViewById(R.id.choose_scissors);
-        connect         = (Button) findViewById(R.id.connect_rps);
+        connectButton   = (Button) findViewById(R.id.connect_rps);
 
         buttons = new Button[3];
         buttons[Choices.ROCK.ordinal()]     = rock;
@@ -86,11 +87,11 @@ public class RPS extends AppCompatActivity {
             }
         });
 
-        connect.setOnClickListener(new View.OnClickListener() {
+        connectButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 enableButtons();
-                connect.setEnabled(false);
+                connectButton.setEnabled(false);
 
                 Thread thread = new Thread(new Runnable() {
                     @Override
@@ -119,27 +120,27 @@ public class RPS extends AppCompatActivity {
                             while (true) {
                                 try {
                                     if (stream.available() > 0) {
-                                        byte[] packet = new byte[4];  // TODO: recombine 4 * 1 byte into a 32-bit (watch out for endianness, look at how you send the thing!
+                                        byte[] packet = new byte[7];
 
                                         int bytesRead = stream.read(packet);
+
+                                        ByteBuffer bb = ByteBuffer.wrap(packet);
 
                                         if (bytesRead < 0) {
                                             Log.e(STREAM, "No data received in handshake");
                                             socket.close();
                                             System.exit(1);
                                         }
-                                        int[] welcomePayload = new int[packet[2]];
-                                        int index = 0;
 
-                                        for (int i = 3; i < 3 + packet[2]; i++) {
-                                            welcomePayload[index] = packet[i];
-                                            index++;
-                                        }
+                                        int[] welcomePayload = new int[bb.get(2)];
 
-                                        Packet welcomePacket = new Packet(packet[0], packet[1], packet[2], welcomePayload);
+                                        welcomePayload[0] = bb.getInt(3);
+
+                                        Packet welcomePacket = new Packet((int)bb.get(0), (int)bb.get(1), (int)bb.get(2), welcomePayload);
 
                                         player = new GameData(welcomePacket.getPayload()[0]);
                                         Log.i(STREAM, welcomePacket.toString());
+                                        Log.i(STREAM, player.toString());
 
                                         //Now an UPDATE message should arrive, inviting play.
 
@@ -151,7 +152,7 @@ public class RPS extends AppCompatActivity {
                                         }
 
                                         int[] updatePayload = new int[packet[2]];
-                                        index = 0;
+                                        int index = 0;
 
                                         for (int i = 3; i < 3 + packet[2]; i++) {
                                             updatePayload[index] = packet[i];
