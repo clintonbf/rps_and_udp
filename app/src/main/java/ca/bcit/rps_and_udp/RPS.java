@@ -7,23 +7,27 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.TextView;
 
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.net.Socket;
 import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 
 enum Choices {
     ROCK,
     PAPER,
     SCISSORS
-}
+};
+
+enum Outcomes {
+    WIN,
+    LOSS,
+    TIE
+};
 
 public class RPS extends AppCompatActivity {
     private static final String STREAM  = "STREAM";
@@ -33,13 +37,15 @@ public class RPS extends AppCompatActivity {
     private static final String OUTCOME = "OUTCOME";
 
     private Button          connectButton;
-    private BufferedReader  fromServer;
     private PrintStream     toServer;
-    private InputStream     stream;
+    private InputStream     fromServer;
+    private TextView        outcome;
     private Socket          socket;
     private GameData        player;
     private Button[]        buttons;
     private int             playChoice = 10000;
+    private int             gameOutcome;
+    private int             opponentsMove;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -50,8 +56,7 @@ public class RPS extends AppCompatActivity {
         Button paper    = (Button) findViewById(R.id.choose_paper);
         Button scissors = (Button) findViewById(R.id.choose_scissors);
         connectButton   = (Button) findViewById(R.id.connect_rps);
-
-
+        outcome         = (TextView) findViewById(R.id.outcome_label);
 
         buttons = new Button[3];
         buttons[Choices.ROCK.ordinal()]     = rock;
@@ -70,6 +75,8 @@ public class RPS extends AppCompatActivity {
 
 //                sendPlay(choice);
                 playChoice = choice;
+                notifyUserOfOutcome();
+                initButtons();
             }
         });
 
@@ -81,6 +88,8 @@ public class RPS extends AppCompatActivity {
 
 //                sendPlay(choice);
                 playChoice = choice;
+                notifyUserOfOutcome();
+                initButtons();
             }
         });
 
@@ -93,7 +102,8 @@ public class RPS extends AppCompatActivity {
 
 //                sendPlay(choice);
                 playChoice = choice;
-
+                notifyUserOfOutcome();
+                initButtons();
             }
         });
 
@@ -112,8 +122,7 @@ public class RPS extends AppCompatActivity {
                              */
                             socket = new Socket(Environment.HOST, Environment.PORT);
                             toServer = new PrintStream(socket.getOutputStream());
-                            fromServer = new BufferedReader(new InputStreamReader(socket.getInputStream())); // this could be simplified to just an InputStream (Readers are for char data, and Buffered... we're not dealing with enough data
-                            stream = socket.getInputStream();
+                            fromServer = socket.getInputStream();
                             /*
                              /connectToServer()
                              */
@@ -131,7 +140,8 @@ public class RPS extends AppCompatActivity {
 
                             final int[] handshakePayload = { PROTOCOL_VERSION, GAME_ID };
 
-                            RequestPacket req = new RequestPacket(uid, CONFIRMATION, CONFIRM_RULESET, payload_length, handshakePayload);
+                            RequestPacket req = new RequestPacket(uid, CONFIRMATION,
+                                    CONFIRM_RULESET, payload_length, handshakePayload);
                             final byte[] handshake = req.toBytes();
 
                             toServer.write(handshake);
@@ -141,13 +151,13 @@ public class RPS extends AppCompatActivity {
 
                             while (true) {
                                 try {
-                                    if (stream.available() > 0) {
+                                    if (fromServer.available() > 0) {
                                         /*
                                         setUid()
                                          */
                                         byte[] packet = new byte[7];
 
-                                        int bytesRead = stream.read(packet);
+                                        int bytesRead = fromServer.read(packet);
 
                                         ByteBuffer bb = ByteBuffer.wrap(packet);
 
@@ -174,7 +184,7 @@ public class RPS extends AppCompatActivity {
                                         getPlayInvitation()
                                          */
 
-                                        bytesRead = stream.read(packet);
+                                        bytesRead = fromServer.read(packet);
                                         if (bytesRead < 0) {
                                             Log.e(STREAM, "No data received in handshake");
                                             socket.close();
@@ -218,7 +228,7 @@ public class RPS extends AppCompatActivity {
                                          */
 
                                         byte[] outcomePacketFromServer = new byte[5];
-                                        bytesRead = stream.read(outcomePacketFromServer);
+                                        bytesRead = fromServer.read(outcomePacketFromServer);
                                         if (bytesRead < 0) {
                                             Log.e(STREAM, "No data received in game outcome");
                                             socket.close();
@@ -235,16 +245,22 @@ public class RPS extends AppCompatActivity {
                                         Log.i(STREAM, "Received game outcome " + outcomePayload[0]);
 
                                         Packet outcomePacket = new Packet(packet[0], packet[1], packet[2], outcomePayload);
+                                        opponentsMove = outcomePayload[1];
 
                                         switch (outcomePacket.payload[0]) {
                                             case 1:
                                                 Log.i(OUTCOME, "Win. Opponent played " + outcomePayload[1]);
+                                                gameOutcome = Outcomes.WIN.ordinal();
                                                 break;
                                             case 2:
                                                 Log.i(OUTCOME, "Loss. Opponent played " + outcomePayload[1]);
+                                                gameOutcome = Outcomes.LOSS.ordinal();
+
                                                 break;
                                             case 3:
                                                 Log.i(OUTCOME, "Tie. Opponent played " + outcomePayload[1]);
+                                                gameOutcome = Outcomes.TIE.ordinal();
+
                                                 break;
                                             default:
                                                 Log.i(OUTCOME, "ERROR");
@@ -252,6 +268,7 @@ public class RPS extends AppCompatActivity {
                                         }
 
                                         Log.i(OUTCOME, "Bye");
+                                        socket.close();
                                     }
                                 } catch (IOException e) {
                                     e.printStackTrace();
@@ -303,7 +320,7 @@ public class RPS extends AppCompatActivity {
                 try {
                     socket = new Socket(Environment.HOST, Environment.PORT);
                     toServer = new PrintStream(socket.getOutputStream());
-                    fromServer = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+//                    fromServer = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 
                 } catch (SocketException se) {
                     Log.e("CONNECTION:", "Unable to connect");
@@ -351,12 +368,12 @@ public class RPS extends AppCompatActivity {
 
     private void setUid() {
         //Read a message
-        try {
-            String message = fromServer.readLine();
-            Log.i("UID", "Server sent uid " + message);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+//        try {
+//            String message = stream.read();
+//            Log.i("UID", "Server sent uid " + message);
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
     }
 
     private void sendPlay(final int choice) {
@@ -421,4 +438,36 @@ public class RPS extends AppCompatActivity {
         }
     }
 
+    private void initButtons() {
+        connectButton.setEnabled(true);
+        disableButtons();
+    }
+
+    private void notifyUserOfOutcome() {
+        switch (gameOutcome){
+            case 0:
+                outcome.setText("WIN! Opponent played " + getTextOfPlay(opponentsMove));
+                break;
+            case 1:
+                outcome.setText("WIN! Opponent played " +  getTextOfPlay(opponentsMove));
+                break;
+            case 2:
+                outcome.setText("WIN! Opponent played " +  getTextOfPlay(opponentsMove));
+                break;
+             default:
+                 break;
+        }
+    }
+
+    private String getTextOfPlay(final int play) {
+        if (play == 1) {
+            return "Rock";
+        }
+
+        if (play == 2) {
+            return "Paper";
+        }
+
+        return "Scissors";
+    }
 }
