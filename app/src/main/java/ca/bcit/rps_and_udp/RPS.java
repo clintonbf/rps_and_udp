@@ -24,34 +24,29 @@ enum Choices {
 }
 
 public class RPS extends AppCompatActivity {
-    private static final String STREAM = "STREAM";
-    private static final String CLICK = "CLICK";
-    private static final String INVITE = "INVITE";
-    private static final String PLAY = "PLAY";
+    private static final String STREAM  = "STREAM";
+    private static final String CLICK   = "CLICK";
+    private static final String INVITE  = "INVITE";
+    private static final String PLAY    = "PLAY";
+    private static final String OUTCOME = "OUTCOME";
 
-    private Button rock;
-    private Button paper;
-    private Button scissors;
-    private Button connect;
-    private BufferedReader fromServer;
-    private PrintStream toServer;
-    private Socket socket;
-    private GameData player;
-
-    private Button[] buttons;
-
-    public boolean running = false;
-    public BufferedReader in;
+    private Button          connect;
+    private BufferedReader  fromServer;
+    private PrintStream     toServer;
+    private InputStream     stream;
+    private Socket          socket;
+    private GameData        player;
+    private Button[]        buttons;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_r_p_s);
 
-        rock        = (Button) findViewById(R.id.choose_rock);
-        paper       = (Button) findViewById(R.id.choose_paper);
-        scissors    = (Button) findViewById(R.id.choose_scissors);
-        connect     = (Button) findViewById(R.id.connect_rps);
+        Button rock     = (Button) findViewById(R.id.choose_rock);
+        Button paper    = (Button) findViewById(R.id.choose_paper);
+        Button scissors = (Button) findViewById(R.id.choose_scissors);
+        connect         = (Button) findViewById(R.id.connect_rps);
 
         buttons = new Button[3];
         buttons[Choices.ROCK.ordinal()]     = rock;
@@ -100,33 +95,31 @@ public class RPS extends AppCompatActivity {
                 Thread thread = new Thread(new Runnable() {
                     @Override
                     public void run() {
-                        running = true;
-
-                        try {
+                         try {
+                            // connectToServer()
                             socket = new Socket(Environment.HOST, Environment.PORT);
                             toServer = new PrintStream(socket.getOutputStream());
                             fromServer = new BufferedReader(new InputStreamReader(socket.getInputStream())); // this could be simplified to just an InputStream (Readers are for char data, and Buffered... we're not dealing with enough data
+                            stream = socket.getInputStream();
 
-                            final byte uid1             = 0;
-                            final byte uid2             = 0;
-                            final byte uid3             = 0;
-                            byte uid4                   = 0;
-                            final byte CONFIRMATION     = 1;
-                            final byte CONFIRM_RULESET  = 1;
-                            final byte payload_length   = 2;
-                            final byte PROTOCOL_VERSION = 1;
-                            final byte GAME_ID          = 2;
+                            final int uid              = 0;
+                            final int CONFIRMATION     = 1;
+                            final int CONFIRM_RULESET  = 1;
+                            final int payload_length   = 2;
+                            final int PROTOCOL_VERSION = 1;
+                            final int GAME_ID          = 2;
 
-                            byte[] handshake = {uid1, uid2, uid3, uid4, CONFIRMATION, CONFIRM_RULESET, payload_length, PROTOCOL_VERSION, GAME_ID};
+                            final int[] handshakePayload = { PROTOCOL_VERSION, GAME_ID };
+
+                            RequestPacket req = new RequestPacket(uid, CONFIRMATION, CONFIRM_RULESET, payload_length, handshakePayload);
+                            final byte[] handshake = req.toBytes();
 
                             toServer.write(handshake);
 
                             while (true) {
                                 try {
-                                    InputStream stream = socket.getInputStream();
-
                                     if (stream.available() > 0) {
-                                        byte[] packet = new byte[4];
+                                        byte[] packet = new byte[4];  // TODO: recombine 4 * 1 byte into a 32-bit (watch out for endianness, look at how you send the thing!
 
                                         int bytesRead = stream.read(packet);
 
@@ -135,20 +128,20 @@ public class RPS extends AppCompatActivity {
                                             socket.close();
                                             System.exit(1);
                                         }
-                                        int[] payload = new int[packet[2]];
+                                        int[] welcomePayload = new int[packet[2]];
                                         int index = 0;
 
                                         for (int i = 3; i < 3 + packet[2]; i++) {
-                                            payload[index] = packet[i];
+                                            welcomePayload[index] = packet[i];
                                             index++;
                                         }
 
-                                        Packet welcomePacket = new Packet(packet[0], packet[1], packet[2], payload);
+                                        Packet welcomePacket = new Packet(packet[0], packet[1], packet[2], welcomePayload);
 
                                         player = new GameData(welcomePacket.getPayload()[0]);
                                         Log.i(STREAM, welcomePacket.toString());
 
-                                        //Now and UPDATE message should arrive, inviting play.
+                                        //Now an UPDATE message should arrive, inviting play.
 
                                         bytesRead = stream.read(packet);
                                         if (bytesRead < 0) {
@@ -157,20 +150,66 @@ public class RPS extends AppCompatActivity {
                                             System.exit(1);
                                         }
 
-                                        payload = new int[packet[2]];
+                                        int[] updatePayload = new int[packet[2]];
                                         index = 0;
 
                                         for (int i = 3; i < 3 + packet[2]; i++) {
-                                            payload[index] = packet[i];
+                                            updatePayload[index] = packet[i];
                                             index++;
                                         }
 
-                                        Packet invitePacket = new Packet(packet[0], packet[1], packet[2], payload);
+                                        Packet invitePacket = new Packet(packet[0], packet[1], packet[2], updatePayload);
                                         Log.i(INVITE, invitePacket.toString());
 
                                         //Send your play
-//                                        enableButtons();
 
+                                        //This is janky, hard-coded nonsense
+                                        final int GAME_ACTION      = 4;
+                                        final int MOVE_MADE        = 2;
+                                        final int play_payload_length   = 1;
+
+                                        final int[] payload = { 1 };
+
+                                        RequestPacket playReq = new RequestPacket(player.getUid(), GAME_ACTION, MOVE_MADE, play_payload_length, payload);
+                                        Log.i(PLAY, playReq.toString());
+                                        final byte[] playPacket = req.toBytes();
+                                        toServer.write(playPacket);
+
+                                        byte[] outcomePacketFromServer = new byte[5];
+                                        bytesRead = stream.read(outcomePacketFromServer);
+                                        if (bytesRead < 0) {
+                                            Log.e(STREAM, "No data received in game outcome");
+                                            socket.close();
+                                            System.exit(1);
+                                        }
+
+                                        int[] outcomePayload = new int[outcomePacketFromServer[2]];
+                                        index = 0;
+                                        for (int i = 3; i < 3 + outcomePacketFromServer[2]; i++) {
+                                            outcomePayload[index] = outcomePacketFromServer[i];
+                                            index++;
+                                        }
+
+                                        Log.i(STREAM, "Received game outcome" + outcomePayload[0]);
+
+                                        Packet outcomePacket = new Packet(packet[0], packet[1], packet[2], outcomePayload);
+
+                                        switch (outcomePacket.getMessageContext()) {
+                                            case 1:
+                                                Log.i(OUTCOME, "Win. Opponent played" + outcomePayload[1]);
+                                                break;
+                                            case 2:
+                                                Log.i(OUTCOME, "Loss. Opponent played" + outcomePayload[1]);
+                                                break;
+                                            case 3:
+                                                Log.i(OUTCOME, "Tie. Opponent played" + outcomePayload[1]);
+                                                break;
+                                            default:
+                                                Log.i(OUTCOME, "ERROR");
+                                                break;
+                                        }
+
+                                        Log.i(OUTCOME, "Bye");
                                     }
                                 } catch (IOException e) {
                                     e.printStackTrace();
@@ -223,7 +262,7 @@ public class RPS extends AppCompatActivity {
     }
 
     private void sendHandshake() {
-        final int uid               = 0;
+        final int uid              = 0;
         final int CONFIRMATION     = 1;
         final int CONFIRM_RULESET  = 1;
         final int payload_length   = 2;
@@ -251,40 +290,6 @@ public class RPS extends AppCompatActivity {
             e.printStackTrace();
         }
         thread.start();
-    }
-
-    public final class Reader implements Runnable {
-
-        final private Socket sock;
-
-        public boolean mRun = false;
-
-        public Reader(final Socket socket) {
-            sock = socket;
-        }
-
-        @Override
-        public void run() {
-            mRun = true;
-            System.out.println("Socket is : " + sock);
-            while (mRun) {
-                try {
-                    fromServer = new BufferedReader(new InputStreamReader(sock.getInputStream()));
-//                    byte[] data = new byte[30];
-//                    int count = fromServer.read();
-
-
-//                    if (count > 1) {
-//                        mRun = false;
-//                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-
-            }
-//            BufferedReader fromServer = new BufferedReader(new InputStreamReader(sock.getInputStream()));
-
-        }
     }
 
     private void setUid() {
