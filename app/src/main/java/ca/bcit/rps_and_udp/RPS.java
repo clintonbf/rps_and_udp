@@ -126,6 +126,22 @@ public class RPS extends AppCompatActivity {
                         sendHandshake();
                         setUid();
                         getPlayInvitation();
+
+                        //Buttons are already enabled (or enable them now if you can figure cross thread msging
+
+                        while (playChoice == 10000);
+
+                        sendPlay();
+                        getPlayAcknowledgement();
+                        processOutcome();
+
+                        try {
+                            toServer.close();
+                            fromServer.close();
+                            socket.close();
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
                     }
                 });
 
@@ -335,7 +351,7 @@ public class RPS extends AppCompatActivity {
      * [ 0 ] | [ 1 ] | [ 1 ] | [ 1 ] | [ 1 2 ]
      */
 
-     private void connectToServer() {
+    private void connectToServer() {
          Log.d(CONNECT, "Attempting connection to "+ Environment.HOST);
 
          try {
@@ -402,7 +418,7 @@ public class RPS extends AppCompatActivity {
 
     private void getPlayInvitation() {
          final int UPDATE = 20;
-         byte[] packet = new byte[2];
+         byte[] packet = new byte[3];
 
          try {
              int bytesRead = fromServer.read(packet);
@@ -417,58 +433,122 @@ public class RPS extends AppCompatActivity {
              Log.e(INVITE, Arrays.toString(packet));
          }
 
-        Log.d(INVITE, "Play invitation received sucessfully " + Arrays.toString(packet));
+        Log.d(INVITE, "Play invitation received successfully " + Arrays.toString(packet));
+
+         //Play buttons should be updated here
     }
 
-    private void sendPlay(final int choice) {
+    private void sendPlay() {
         final int GAME_ACTION      = 4;
         final int MOVE_MADE        = 2;
-        final int payload_length   = 1;
+        final int PAYLOAD_LENGTH   = 1;
 
-        final int[] payload = { choice };
+        final int[] payload = { playChoice };
 
-        disableButtons();
+        RequestPacket playReq = new RequestPacket(player.getUid(),
+                GAME_ACTION, MOVE_MADE, PAYLOAD_LENGTH,
+                payload);
 
-        RequestPacket req = new RequestPacket(player.getUid(), GAME_ACTION, MOVE_MADE, payload_length, payload);
-        Log.d(PLAY, req.toString());
-        final byte[] packet = req.toBytes();
+        Log.d(PLAY, playReq.toString());
 
-        Thread thread = null;
+        final byte[] playPacket = playReq.toBytes();
+
         try {
-            thread = new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        toServer.write(packet);
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
-            });
-        } catch (Exception e) {
+            toServer.write(playPacket);
+        } catch (IOException e) {
             e.printStackTrace();
         }
-        thread.start();
+
+        Log.d(PLAY, "Send play to server: " + playChoice);
     }
 
-    private void sendPacket(final byte[] packet) {
-        Thread thread = null;
-        try {
-            thread = new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        toServer.write(packet);
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
+    private void getPlayAcknowledgement() {
+         byte[] playAckPacket = new byte[3];
+
+        boolean waitingForData = true;
+
+        while (waitingForData) {
+            try {
+                if (fromServer.available() > 0) {
+                    waitingForData = false;
                 }
-            });
-        } catch (Exception e) {
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+         try {
+             int bytesRead = fromServer.read(playAckPacket);
+
+             checkBytesRead(bytesRead, STREAM, "No data received in play acknowledgement");
+         } catch (IOException e) {
+             e.printStackTrace();
+         }
+
+        if (playAckPacket[0] == 10) {
+            Log.d(PLAY_ACK, "Received acknowledgement from server");
+        } else {
+            Log.e(PLAY_ACK, "Server sent strange msg. " + playAckPacket[0]);
+        }
+    }
+
+    private void processOutcome() {
+        byte[] packetFromServer = new byte[5];
+
+        boolean waitingForData = true;
+
+        while (waitingForData) {
+            try {
+                if (fromServer.available() > 0) {
+                    waitingForData = false;
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        try {
+            int bytesRead = fromServer.read(packetFromServer);
+            checkBytesRead(bytesRead, STREAM, "No data received in game outcome");
+        } catch (IOException e) {
             e.printStackTrace();
         }
-        thread.start();
+
+        int[] payload = new int[packetFromServer[2]];
+
+        int index = 0;
+        for (int i = 3; i < 3 + packetFromServer[2]; i++) {
+            payload[index] = packetFromServer[i];
+            index++;
+        }
+
+        Log.d(STREAM, "Received game outcome " + payload[0]);
+
+        switch (payload[0]) {
+            case 1:
+                Log.d(OUTCOME, "Win. Opponent played " + payload[1]);
+                gameOutcome = Outcomes.WIN.ordinal();
+                break;
+            case 2:
+                Log.d(OUTCOME, "Loss. Opponent played " + payload[1]);
+                gameOutcome = Outcomes.LOSS.ordinal();
+
+                break;
+            case 3:
+                Log.d(OUTCOME, "Tie. Opponent played " + payload[1]);
+                gameOutcome = Outcomes.TIE.ordinal();
+
+                break;
+            default:
+                Log.d(OUTCOME, "ERROR");
+                break;
+        }
+
+
+        Log.d(OUTCOME, "Bye");
     }
+
+
 
     private void disableButtons() {
         for (Button button : this.buttons) {
