@@ -2,6 +2,7 @@ package ca.bcit.rps_and_udp;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -31,13 +32,14 @@ public class RPS extends AppCompatActivity {
     private static final String PLAY    = "PLAY";
     private static final String OUTCOME = "OUTCOME";
 
-    private Button connectButton;
+    private Button          connectButton;
     private BufferedReader  fromServer;
     private PrintStream     toServer;
     private InputStream     stream;
     private Socket          socket;
     private GameData        player;
     private Button[]        buttons;
+    private int             playChoice = 10000;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -48,6 +50,8 @@ public class RPS extends AppCompatActivity {
         Button paper    = (Button) findViewById(R.id.choose_paper);
         Button scissors = (Button) findViewById(R.id.choose_scissors);
         connectButton   = (Button) findViewById(R.id.connect_rps);
+
+
 
         buttons = new Button[3];
         buttons[Choices.ROCK.ordinal()]     = rock;
@@ -64,7 +68,8 @@ public class RPS extends AppCompatActivity {
                 Log.i(CLICK, "Clicked " + Choices.ROCK);
                 final int choice = 1;
 
-                sendPlay(choice);
+//                sendPlay(choice);
+                playChoice = choice;
             }
         });
 
@@ -74,16 +79,21 @@ public class RPS extends AppCompatActivity {
                 Log.i(CLICK, "Clicked " + Choices.PAPER);
                 final int choice = 2;
 
-                sendPlay(choice);
+//                sendPlay(choice);
+                playChoice = choice;
             }
         });
+
 
         buttons[Choices.SCISSORS.ordinal()].setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 Log.i(CLICK, "Clicked " + Choices.SCISSORS);
                 final int choice = 3;
-                sendPlay(choice);
+
+//                sendPlay(choice);
+                playChoice = choice;
+
             }
         });
 
@@ -97,12 +107,21 @@ public class RPS extends AppCompatActivity {
                     @Override
                     public void run() {
                          try {
-                            // connectToServer()
+                            /*
+                             connectToServer()
+                             */
                             socket = new Socket(Environment.HOST, Environment.PORT);
                             toServer = new PrintStream(socket.getOutputStream());
                             fromServer = new BufferedReader(new InputStreamReader(socket.getInputStream())); // this could be simplified to just an InputStream (Readers are for char data, and Buffered... we're not dealing with enough data
                             stream = socket.getInputStream();
+                            /*
+                             /connectToServer()
+                             */
+//                             new connectToServerClass().execute();
 
+                             /*
+                             sendHandshake()
+                              */
                             final int uid              = 0;
                             final int CONFIRMATION     = 1;
                             final int CONFIRM_RULESET  = 1;
@@ -116,10 +135,16 @@ public class RPS extends AppCompatActivity {
                             final byte[] handshake = req.toBytes();
 
                             toServer.write(handshake);
+                            /*
+                            / sendHandshake()
+                             */
 
                             while (true) {
                                 try {
                                     if (stream.available() > 0) {
+                                        /*
+                                        setUid()
+                                         */
                                         byte[] packet = new byte[7];
 
                                         int bytesRead = stream.read(packet);
@@ -141,8 +166,13 @@ public class RPS extends AppCompatActivity {
                                         player = new GameData(welcomePacket.getPayload()[0]);
                                         Log.i(STREAM, welcomePacket.toString());
                                         Log.i(STREAM, player.toString());
+                                        /*
+                                        / setUid()
+                                         */
 
-                                        //Now an UPDATE message should arrive, inviting play.
+                                        /*
+                                        getPlayInvitation()
+                                         */
 
                                         bytesRead = stream.read(packet);
                                         if (bytesRead < 0) {
@@ -161,20 +191,31 @@ public class RPS extends AppCompatActivity {
 
                                         Packet invitePacket = new Packet(packet[0], packet[1], packet[2], updatePayload);
                                         Log.i(INVITE, invitePacket.toString());
+                                        /*
+                                        / getPlayInvitation()
+                                         */
 
                                         //Send your play
 
-                                        //This is janky, hard-coded nonsense
+                                        /*
+                                        janky-ass nonsense
+                                         */
+
+                                        while (playChoice == 10000);
+
                                         final int GAME_ACTION      = 4;
                                         final int MOVE_MADE        = 2;
                                         final int play_payload_length   = 1;
 
-                                        final int[] payload = { 1 };
+                                        final int[] payload = { playChoice };
 
                                         RequestPacket playReq = new RequestPacket(player.getUid(), GAME_ACTION, MOVE_MADE, play_payload_length, payload);
                                         Log.i(PLAY, playReq.toString());
                                         final byte[] playPacket = req.toBytes();
                                         toServer.write(playPacket);
+                                        /*
+                                        / janky-ass nonsense
+                                         */
 
                                         byte[] outcomePacketFromServer = new byte[5];
                                         bytesRead = stream.read(outcomePacketFromServer);
@@ -191,19 +232,19 @@ public class RPS extends AppCompatActivity {
                                             index++;
                                         }
 
-                                        Log.i(STREAM, "Received game outcome" + outcomePayload[0]);
+                                        Log.i(STREAM, "Received game outcome " + outcomePayload[0]);
 
                                         Packet outcomePacket = new Packet(packet[0], packet[1], packet[2], outcomePayload);
 
-                                        switch (outcomePacket.getMessageContext()) {
+                                        switch (outcomePacket.payload[0]) {
                                             case 1:
-                                                Log.i(OUTCOME, "Win. Opponent played" + outcomePayload[1]);
+                                                Log.i(OUTCOME, "Win. Opponent played " + outcomePayload[1]);
                                                 break;
                                             case 2:
-                                                Log.i(OUTCOME, "Loss. Opponent played" + outcomePayload[1]);
+                                                Log.i(OUTCOME, "Loss. Opponent played " + outcomePayload[1]);
                                                 break;
                                             case 3:
-                                                Log.i(OUTCOME, "Tie. Opponent played" + outcomePayload[1]);
+                                                Log.i(OUTCOME, "Tie. Opponent played " + outcomePayload[1]);
                                                 break;
                                             default:
                                                 Log.i(OUTCOME, "ERROR");
@@ -239,6 +280,21 @@ public class RPS extends AppCompatActivity {
      *
      * [ 0 ] | [ 1 ] | [ 1 ] | [ 1 ] | [ 1 2 ]
      */
+
+
+    private class connectToServerClass extends AsyncTask<Void, Void, Void> {
+        @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+        }
+
+        @Override
+        protected Void doInBackground(Void... arg0) {
+            connectToServer();
+
+            return null;
+        }
+    }
 
     private void connectToServer() {
         Thread thread = new Thread(new Runnable() {
