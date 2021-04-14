@@ -2,7 +2,6 @@ package ca.bcit.rps_and_udp;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -12,9 +11,7 @@ import android.widget.TextView;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
-import java.net.InetAddress;
 import java.net.Socket;
-import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -395,15 +392,20 @@ public class RPS extends AppCompatActivity {
     }
 
     private void notifyUserOfOutcome() {
+        String text;
+
         switch (gameOutcome){
-            case 0:
-                outcome.setText("WIN! Opponent played " + getTextOfPlay(opponentsMove));
-                break;
             case 1:
-                outcome.setText("WIN! Opponent played " +  getTextOfPlay(opponentsMove));
+                text = String.format(getResources().getString(R.string.win), getTextOfPlay(opponentsMove));
+                outcome.setText(text);
                 break;
             case 2:
-                outcome.setText("WIN! Opponent played " +  getTextOfPlay(opponentsMove));
+                text = String.format(getResources().getString(R.string.loss), getTextOfPlay(opponentsMove));
+                outcome.setText(text);
+                break;
+            case 3:
+                text = String.format(getResources().getString(R.string.tie), getTextOfPlay(opponentsMove));
+                outcome.setText(text);
                 break;
              default:
                  break;
@@ -430,7 +432,7 @@ public class RPS extends AppCompatActivity {
                 socket.close();
             } catch (IOException e) {
                 e.printStackTrace();
-            }finally {
+            } finally {
                 System.exit(1);
             }
         }

@@ -8,4 +8,8 @@
     <string name="scissors">Scissors</string>
     <string name="rock">Rock</string>
     <string name="paper">Paper</string>
+
+    <string name="win">You WIN! Your opponent played %1$s</string>
+    <string name="loss">You LOSE! Your opponent played %1$s</string>
+    <string name="tie">You TIE! Your opponent played %1$s</string>
 </resources>
