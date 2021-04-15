@@ -24,11 +24,11 @@ enum Outcomes {
 
 public class RPS extends AppCompatActivity {
     private static final String CONNECT     = "CONNECT";
-    private static final String UID      = "UID";
+    private static final String SET_UID = "SET UID";
     private static final String STREAM  = "STREAM";
     private static final String CLICK   = "CLICK";
-    private static final String INVITE  = "INVITE";
-    private static final String PLAY    = "PLAY";
+    private static final String RECEIVE_INVITATION = "RECEIVE_INVITATION";
+    private static final String SEND_PLAY = "SEND PLAY";
     private static final String PLAY_ACK    = "PLAY Acknowledged";
     private static final String OUTCOME = "OUTCOME";
 
@@ -70,24 +70,14 @@ public class RPS extends AppCompatActivity {
         buttons[ROCK].setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Log.d(CLICK, "Clicked " + ROCK);
-
-//                sendPlay(choice);
-                playChoice = ROCK;
-                notifyUserOfOutcome();
-                initButtons();
+                processClick(ROCK, "Rock");
             }
         });
 
         buttons[PAPER].setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Log.d(CLICK, "Clicked " + PAPER);
-
-//                sendPlay(choice);
-                playChoice = PAPER;
-                notifyUserOfOutcome();
-                initButtons();
+                processClick(PAPER, "Paper");
             }
         });
 
@@ -95,12 +85,7 @@ public class RPS extends AppCompatActivity {
         buttons[SCISSORS].setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Log.d(CLICK, "Clicked " + SCISSORS);
-
-//                sendPlay(choice);
-                playChoice = SCISSORS;
-                notifyUserOfOutcome();
-                initButtons();
+                processClick(SCISSORS, "Scissors");
             }
         });
 
@@ -121,6 +106,7 @@ public class RPS extends AppCompatActivity {
                         //Buttons are already enabled (or enable them now if you can figure cross thread msging
 
                         while (playChoice == 10000);
+                        Log.d(SEND_PLAY, "Play has been chosen by player " + player.getUid());
 
                         sendPlay();
                         getPlayAcknowledgement();
@@ -159,6 +145,7 @@ public class RPS extends AppCompatActivity {
             socket = new Socket(Environment.HOST, Environment.PORT);
             toServer = new PrintStream(socket.getOutputStream());
             fromServer = socket.getInputStream();
+            socket.setSoTimeout(10*1000);
 
             Log.d(CONNECT, "Established connection");
 
@@ -209,7 +196,7 @@ public class RPS extends AppCompatActivity {
         try {
            int bytesRead = fromServer.read(packet);
 
-           checkBytesRead(bytesRead, UID, "No data received from handshake");
+           checkBytesRead(bytesRead, SET_UID, "No data received from handshake");
 
            ByteBuffer bb = ByteBuffer.wrap(packet);
 
@@ -221,8 +208,7 @@ public class RPS extends AppCompatActivity {
 
            player = new GameData(welcomePacket.getPayload()[0]);
 
-           Log.d(STREAM, welcomePacket.toString());
-           Log.d(STREAM, player.toString());
+           Log.d(SET_UID, "Player UID received from server: " + player.getUid());
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -247,17 +233,17 @@ public class RPS extends AppCompatActivity {
          try {
              int bytesRead = fromServer.read(packet);
 
-             checkBytesRead(bytesRead, INVITE, "Bad invitation received");
+             checkBytesRead(bytesRead, RECEIVE_INVITATION, "Bad invitation received");
          } catch (IOException e) {
              e.printStackTrace();
          }
 
          if (packet[0] != UPDATE) {
-             Log.e(INVITE, "Received bad invitation");
-             Log.e(INVITE, Arrays.toString(packet));
+             Log.e(RECEIVE_INVITATION, "Received bad invitation");
+             Log.e(RECEIVE_INVITATION, Arrays.toString(packet));
          }
 
-        Log.d(INVITE, "Play invitation received successfully " + Arrays.toString(packet));
+        Log.d(RECEIVE_INVITATION, "Play invitation received successfully " + Arrays.toString(packet));
 
          //Play buttons should be updated here
     }
@@ -273,7 +259,7 @@ public class RPS extends AppCompatActivity {
                 GAME_ACTION, MOVE_MADE, PAYLOAD_LENGTH,
                 payload);
 
-        Log.d(PLAY, playReq.toString());
+        Log.d(SEND_PLAY, playReq.toString());
 
         final byte[] playPacket = playReq.toBytes();
 
@@ -283,7 +269,7 @@ public class RPS extends AppCompatActivity {
             e.printStackTrace();
         }
 
-        Log.d(PLAY, "Send play to server: " + playChoice);
+        Log.d(SEND_PLAY, "Send play to server: " + playChoice);
     }
 
     private void getPlayAcknowledgement() {
@@ -304,7 +290,7 @@ public class RPS extends AppCompatActivity {
          try {
              int bytesRead = fromServer.read(playAckPacket);
 
-             checkBytesRead(bytesRead, STREAM, "No data received in play acknowledgement");
+             checkBytesRead(bytesRead, PLAY_ACK, "No data received in play acknowledgement");
          } catch (IOException e) {
              e.printStackTrace();
          }
@@ -333,7 +319,7 @@ public class RPS extends AppCompatActivity {
 
         try {
             int bytesRead = fromServer.read(packetFromServer);
-            checkBytesRead(bytesRead, STREAM, "No data received in game outcome");
+            checkBytesRead(bytesRead, OUTCOME, "No data received in game outcome");
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -436,5 +422,14 @@ public class RPS extends AppCompatActivity {
                 System.exit(1);
             }
         }
+    }
+
+    private void processClick(final int choice, final String choiceString) {
+        Log.d(CLICK, "Clicked " + choiceString);
+
+//                sendPlay(choice);
+        playChoice = choice;
+        notifyUserOfOutcome();
+        initButtons();
     }
 }
