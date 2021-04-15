@@ -216,6 +216,9 @@ public class RPS extends AppCompatActivity {
 
     private void getPlayInvitation() {
          final int UPDATE = 20;
+         final int CONTEXT = 1;
+         final int PAYLOAD_LENGTH = 0;
+
          byte[] packet = new byte[3];
 
         boolean waitingForData = true;
@@ -243,7 +246,9 @@ public class RPS extends AppCompatActivity {
              Log.e(RECEIVE_INVITATION, Arrays.toString(packet));
          }
 
-        Log.d(RECEIVE_INVITATION, "Play invitation received successfully " + Arrays.toString(packet));
+        System.out.println("Packet length " + packet.length);
+
+        Log.d(RECEIVE_INVITATION, "Play invitation for player " + player.getUid() + " received successfully " + Arrays.toString(packet));
 
          //Play buttons should be updated here
     }
@@ -259,7 +264,7 @@ public class RPS extends AppCompatActivity {
                 GAME_ACTION, MOVE_MADE, PAYLOAD_LENGTH,
                 payload);
 
-        Log.d(SEND_PLAY, playReq.toString());
+        Log.d(SEND_PLAY, "Play request packet: " + playReq.toString());
 
         final byte[] playPacket = playReq.toBytes();
 
@@ -268,8 +273,6 @@ public class RPS extends AppCompatActivity {
         } catch (IOException e) {
             e.printStackTrace();
         }
-
-        Log.d(SEND_PLAY, "Send play to server: " + playChoice);
     }
 
     private void getPlayAcknowledgement() {
@@ -298,7 +301,7 @@ public class RPS extends AppCompatActivity {
         if (playAckPacket[0] == 10) {
             Log.d(PLAY_ACK, "Received acknowledgement from server");
         } else {
-            Log.e(PLAY_ACK, "Server sent strange msg. " + playAckPacket[0]);
+            Log.e(PLAY_ACK, "Server sent strange msg. " + Arrays.toString(playAckPacket));
         }
     }
 
