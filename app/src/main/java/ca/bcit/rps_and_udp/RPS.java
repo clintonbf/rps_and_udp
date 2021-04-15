@@ -16,12 +16,6 @@ import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 
-enum Outcomes {
-    WIN,
-    LOSS,
-    TIE
-};
-
 public class RPS extends AppCompatActivity {
     private static final String CONNECT     = "CONNECT";
     private static final String SET_UID = "SET UID";
@@ -36,6 +30,11 @@ public class RPS extends AppCompatActivity {
     private static final int PAPER      = 2;
     private static final int SCISSORS   = 3;
 
+    private static final int WIN        = 1;
+    private static final int LOSS       = 2;
+    private static final int TIE        = 3;
+
+
     private Button          connectButton;
     private PrintStream     toServer;
     private InputStream     fromServer;
@@ -44,7 +43,7 @@ public class RPS extends AppCompatActivity {
     private GameData        player;
     private Button[]        buttons;
     private int             playChoice = 10000;
-    private int             gameOutcome;
+    private int             gameOutcome = 0;
     private int             opponentsMove;
 
     @Override
@@ -80,7 +79,6 @@ public class RPS extends AppCompatActivity {
                 processClick(PAPER, "Paper");
             }
         });
-
 
         buttons[SCISSORS].setOnClickListener(new View.OnClickListener() {
             @Override
@@ -270,6 +268,18 @@ public class RPS extends AppCompatActivity {
     private void processOutcome() {
         byte[] packetFromServer = new byte[5];
 
+        boolean waitingForData = true;
+
+        while (waitingForData) {
+            try {
+                if (fromServer.available() > 0) {
+                    waitingForData = false;
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
         try {
             int bytesRead = fromServer.read(packetFromServer);
             checkBytesRead(bytesRead, OUTCOME, "No data received in game outcome");
@@ -285,28 +295,26 @@ public class RPS extends AppCompatActivity {
             index++;
         }
 
-        Log.d(STREAM, "Received game outcome " + payload[0]);
+        Log.d(STREAM, "Player " + player.getUid() + " received game outcome " + payload[0]);
+        opponentsMove = payload[1];
 
         switch (payload[0]) {
             case 1:
-                Log.d(OUTCOME, "Win. Opponent played " + payload[1]);
-                gameOutcome = Outcomes.WIN.ordinal();
+                Log.d(OUTCOME, player.getUid() + " wins. Opponent played " + getTextOfPlay(opponentsMove));
+                gameOutcome = WIN;
                 break;
             case 2:
-                Log.d(OUTCOME, "Loss. Opponent played " + payload[1]);
-                gameOutcome = Outcomes.LOSS.ordinal();
-
+                Log.d(OUTCOME, player.getUid() + " loses. Opponent played " + getTextOfPlay(opponentsMove));
+                gameOutcome = LOSS;
                 break;
             case 3:
-                Log.d(OUTCOME, "Tie. Opponent played " + payload[1]);
-                gameOutcome = Outcomes.TIE.ordinal();
-
+                Log.d(OUTCOME, "Players tie. Opponent played " + getTextOfPlay(opponentsMove));
+                gameOutcome = TIE;
                 break;
             default:
                 Log.d(OUTCOME, "ERROR");
                 break;
         }
-
 
         Log.d(OUTCOME, "Bye");
     }
@@ -332,15 +340,15 @@ public class RPS extends AppCompatActivity {
         String text;
 
         switch (gameOutcome){
-            case 1:
+            case WIN:
                 text = String.format(getResources().getString(R.string.win), getTextOfPlay(opponentsMove));
                 outcome.setText(text);
                 break;
-            case 2:
+            case LOSS:
                 text = String.format(getResources().getString(R.string.loss), getTextOfPlay(opponentsMove));
                 outcome.setText(text);
                 break;
-            case 3:
+            case TIE:
                 text = String.format(getResources().getString(R.string.tie), getTextOfPlay(opponentsMove));
                 outcome.setText(text);
                 break;
@@ -382,6 +390,8 @@ public class RPS extends AppCompatActivity {
 
 //                sendPlay(choice);
         playChoice = choice;
+
+        while (gameOutcome == 0);
         notifyUserOfOutcome();
         initButtons();
     }
