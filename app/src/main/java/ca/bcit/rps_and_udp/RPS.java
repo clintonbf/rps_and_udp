@@ -181,18 +181,6 @@ public class RPS extends AppCompatActivity {
     private void setUid() {
         byte[] packet = new byte[7];
 
-        boolean waitingForData = true;
-
-        while (waitingForData) {
-            try {
-                if (fromServer.available() > 0) {
-                    waitingForData = false;
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-
         try {
            int bytesRead = fromServer.read(packet);
 
@@ -221,18 +209,6 @@ public class RPS extends AppCompatActivity {
 
          byte[] packet = new byte[3];
 
-        boolean waitingForData = true;
-
-        while (waitingForData) {
-            try {
-                if (fromServer.available() > 0) {
-                    waitingForData = false;
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-
          try {
              int bytesRead = fromServer.read(packet);
 
@@ -245,8 +221,6 @@ public class RPS extends AppCompatActivity {
              Log.e(RECEIVE_INVITATION, "Received bad invitation");
              Log.e(RECEIVE_INVITATION, Arrays.toString(packet));
          }
-
-        System.out.println("Packet length " + packet.length);
 
         Log.d(RECEIVE_INVITATION, "Play invitation for player " + player.getUid() + " received successfully " + Arrays.toString(packet));
 
@@ -276,19 +250,7 @@ public class RPS extends AppCompatActivity {
     }
 
     private void getPlayAcknowledgement() {
-         byte[] playAckPacket = new byte[3];
-
-        boolean waitingForData = true;
-
-        while (waitingForData) {
-            try {
-                if (fromServer.available() > 0) {
-                    waitingForData = false;
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
+        byte[] playAckPacket = new byte[3];
 
          try {
              int bytesRead = fromServer.read(playAckPacket);
@@ -307,18 +269,6 @@ public class RPS extends AppCompatActivity {
 
     private void processOutcome() {
         byte[] packetFromServer = new byte[5];
-
-        boolean waitingForData = true;
-
-        while (waitingForData) {
-            try {
-                if (fromServer.available() > 0) {
-                    waitingForData = false;
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
 
         try {
             int bytesRead = fromServer.read(packetFromServer);
@@ -360,8 +310,6 @@ public class RPS extends AppCompatActivity {
 
         Log.d(OUTCOME, "Bye");
     }
-
-
 
     private void disableButtons() {
         for (int i = 1; i < buttons.length; i++) {
@@ -425,6 +373,8 @@ public class RPS extends AppCompatActivity {
                 System.exit(1);
             }
         }
+
+        Log.d(type, "Read " + bytesRead + " bytes");
     }
 
     private void processClick(final int choice, final String choiceString) {
