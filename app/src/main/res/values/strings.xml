@@ -12,4 +12,30 @@
     <string name="win">You WIN! Your opponent played %1$s</string>
     <string name="loss">You LOSE! Your opponent played %1$s</string>
     <string name="tie">You TIE! Your opponent played %1$s</string>
+
+
+    <string name="call_someone">Make a call</string>
+    <string name="await_call">Wait for call</string>
+    <string name="send_hello">Send Hello</string>
+    <string name="send_long_text">Send long message</string>
+    <string name="send_sound">Send a sound</string>
+    <string name="read_write_sound">Read/write sound</string>
+    <string name="send_battle">Send battle</string>
+    <string name="send_natural">Send Natural One</string>
+    <string name="send_meep">Send Meepmeep!</string>
+    <string name="got_to_player">Go to player</string>
+
+    <string name="send_voice_memo">Send a memo</string>
+    <string name="push_to_talk">Push to talk</string>
+    <string name="end_memo">End memo recording</string>
+
+
+    <string name="pause">Pause</string>
+
+    <string name="connect_to_udp_server">Connect to UDP Server</string>
+    <string name="hang_up">hang up</string>
+    <string name="push_to_listen">Start listening</string>
+    <string name="record">Record</string>
+    <string name="stop">Stop</string>
+    <string name="play">Play</string>
 </resources>

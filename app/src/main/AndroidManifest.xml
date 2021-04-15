@@ -3,6 +3,10 @@
     package="ca.bcit.rps_and_udp">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+
 
     <application
         android:allowBackup="true"
@@ -11,7 +15,12 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
-        <activity android:name=".RPS"></activity>
+        <activity android:name=".Player"></activity>
+        <activity android:name=".UDPChat" />
+        <activity android:name=".SendAVoiceMemo" />
+        <activity android:name=".RecordAMemo" />
+        <activity android:name=".ChatMenu" />
+        <activity android:name=".RPS" />
         <activity android:name=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
