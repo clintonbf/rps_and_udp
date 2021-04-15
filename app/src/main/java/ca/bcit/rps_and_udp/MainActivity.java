@@ -29,8 +29,8 @@ public class MainActivity extends AppCompatActivity {
         goToChat.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
-//                Intent i = new Intent(getApplicationContext(), Chat.class);
-//                startActivity(i);
+                Intent i = new Intent(getApplicationContext(), ChatMenu.class);
+                startActivity(i);
             }
         });
     }
